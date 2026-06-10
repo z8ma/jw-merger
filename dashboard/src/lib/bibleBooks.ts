@@ -1,0 +1,25 @@
+export const BIBLE_BOOKS: Record<number, string> = {
+  1: 'Genèse', 2: 'Exode', 3: 'Lévitique', 4: 'Nombres', 5: 'Deutéronome',
+  6: 'Josué', 7: 'Juges', 8: 'Ruth', 9: '1 Samuel', 10: '2 Samuel',
+  11: '1 Rois', 12: '2 Rois', 13: '1 Chroniques', 14: '2 Chroniques',
+  15: 'Esdras', 16: 'Néhémie', 17: 'Esther', 18: 'Job', 19: 'Psaumes',
+  20: 'Proverbes', 21: 'Ecclésiaste', 22: 'Cantique', 23: 'Isaïe',
+  24: 'Jérémie', 25: 'Lamentations', 26: 'Ézéchiel', 27: 'Daniel',
+  28: 'Osée', 29: 'Joël', 30: 'Amos', 31: 'Abdias', 32: 'Jonas',
+  33: 'Michée', 34: 'Nahum', 35: 'Habacuc', 36: 'Sophonie', 37: 'Aggée',
+  38: 'Zacharie', 39: 'Malachie',
+  40: 'Matthieu', 41: 'Marc', 42: 'Luc', 43: 'Jean', 44: 'Actes',
+  45: 'Romains', 46: '1 Corinthiens', 47: '2 Corinthiens', 48: 'Galates',
+  49: 'Éphésiens', 50: 'Philippiens', 51: 'Colossiens',
+  52: '1 Thessaloniciens', 53: '2 Thessaloniciens',
+  54: '1 Timothée', 55: '2 Timothée', 56: 'Tite', 57: 'Philémon',
+  58: 'Hébreux', 59: 'Jacques', 60: '1 Pierre', 61: '2 Pierre',
+  62: '1 Jean', 63: '2 Jean', 64: '3 Jean', 65: 'Jude', 66: 'Révélation',
+}
+
+export function formatBibleRef(book: number | null, chapter: number | null): string | null {
+  if (!book) return null
+  const name = BIBLE_BOOKS[book]
+  if (!name) return null
+  return chapter ? `${name} ${chapter}` : name
+}

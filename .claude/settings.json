@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /tmp/jw-phone /tmp/jw-pc)",
+      "Bash(unzip -o \"/Users/leso/jw-save/Save phone.jwlibrary\" -d /tmp/jw-phone)",
+      "Bash(unzip -o \"/Users/leso/jw-save/save pc.jwlibrary\" -d /tmp/jw-pc)",
+      "Read(//private/tmp/jw-phone/**)",
+      "Read(//private/tmp/jw-pc/**)",
+      "Bash(sqlite3 /tmp/jw-phone/userData.db \".tables\")",
+      "Bash(sqlite3 /tmp/jw-phone/userData.db \".schema\")",
+      "Bash(sqlite3 /tmp/jw-phone/userData.db ' *)",
+      "Bash(sqlite3 /tmp/jw-pc/userData.db ' *)",
+      "Bash(sqlite3 /tmp/jw-phone/userData.db \"SELECT NoteId, Guid, Title, substr\\(Content,1,80\\), LastModified, Created FROM Note LIMIT 5;\")",
+      "Bash(sqlite3 /tmp/jw-phone/userData.db \"SELECT UserMarkId, ColorIndex, LocationId, StyleIndex, UserMarkGuid, Version FROM UserMark LIMIT 5;\")",
+      "Bash(sqlite3 /tmp/jw-phone/userData.db \"SELECT * FROM Location LIMIT 5;\")",
+      "Bash(sqlite3 /tmp/jw-phone/userData.db \"SELECT * FROM Tag;\")",
+      "Bash(sqlite3 /tmp/jw-phone/userData.db \"SELECT * FROM Bookmark LIMIT 5;\")",
+      "Bash(sqlite3 /tmp/jw-pc/userData.db \"SELECT * FROM Tag;\")",
+      "Bash(sqlite3 /tmp/jw-phone/userData.db \"SELECT BlockRangeId, BlockType, Identifier, StartToken, EndToken, UserMarkId FROM BlockRange LIMIT 5;\")",
+      "Bash(sqlite3 /tmp/jw-phone/userData.db \"SELECT LocationId, TextTag, substr\\(Value,1,80\\) FROM InputField LIMIT 5;\")",
+      "Bash(sqlite3 /tmp/jw-pc/userData.db \"SELECT PlaylistItemId, Label, Accuracy, EndAction, ThumbnailFilePath FROM PlaylistItem LIMIT 5;\")",
+      "Bash(sqlite3 /tmp/jw-phone/userData.db \"SELECT * FROM TagMap LIMIT 10;\")",
+      "Bash(sqlite3 /tmp/jw-phone/userData.db \"SELECT Type, COUNT\\(*\\) FROM Location GROUP BY Type;\")",
+      "Bash(sqlite3 /tmp/jw-pc/userData.db \"SELECT Type, COUNT\\(*\\) FROM Location GROUP BY Type;\")",
+      "Bash(sqlite3 /tmp/jw-phone/userData.db \"SELECT ColorIndex, COUNT\\(*\\) FROM UserMark GROUP BY ColorIndex;\")",
+      "Bash(sqlite3 /tmp/jw-pc/userData.db \"SELECT ColorIndex, COUNT\\(*\\) FROM UserMark GROUP BY ColorIndex;\")",
+      "Bash(sqlite3 /tmp/jw-phone/userData.db \"SELECT Type, COUNT\\(*\\) FROM Tag GROUP BY Type;\")",
+      "Bash(sqlite3 /tmp/jw-phone/userData.db \"SELECT COUNT\\(*\\) FROM Note WHERE LocationId IS NULL;\")",
+      "Bash(grep -v -E '\\\\.\\(jpg|jpeg|png|PNG|db|json\\)$')",
+      "Bash(sqlite3 /tmp/jw-phone/userData.db \"SELECT * FROM PlaylistItemAccuracy;\")",
+      "Bash(python3 merge.py \"Save phone.jwlibrary\" \"save pc.jwlibrary\" \"merged.jwlibrary\")",
+      "Bash(sqlite3 /tmp/jw-phone/userData.db \"ATTACH '/tmp/jw-pc/userData.db' AS pc; SELECT 'Communs' , COUNT\\(*\\) FROM Location l JOIN pc.Location pl ON \\(CASE WHEN l.BookNumber != 0 AND l.BookNumber IS NOT NULL THEN l.BookNumber = pl.BookNumber AND l.ChapterNumber IS pl.ChapterNumber AND l.KeySymbol = pl.KeySymbol AND l.MepsLanguage IS pl.MepsLanguage AND l.Type = pl.Type WHEN l.DocumentId != 0 AND l.DocumentId IS NOT NULL THEN l.DocumentId = pl.DocumentId AND l.KeySymbol IS pl.KeySymbol AND l.Type = pl.Type ELSE l.KeySymbol IS pl.KeySymbol AND l.Type = pl.Type END\\);\")",
+      "Bash(sqlite3 /tmp/jw-merged-check/userData.db ' *)",
+      "Bash(sqlite3 /tmp/jw-merged-check/userData.db \"PRAGMA foreign_key_check;\")",
+      "Bash(sqlite3 /tmp/jw-merged-check/userData.db \"PRAGMA integrity_check;\")",
+      "Bash(npm --version)",
+      "Bash(npm create *)"
+    ]
+  }
+}
