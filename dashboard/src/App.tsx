@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { Hero } from './components/Hero'
 import { Landing } from './components/Landing'
 import { Dashboard } from './components/Dashboard'
 import { parseBackup } from './lib/parseBackup'
@@ -14,13 +15,14 @@ interface LoadedState {
 }
 
 export default function App() {
-  const [fileA, setFileA] = useState<File | null>(null)
-  const [fileB, setFileB] = useState<File | null>(null)
+  const [fileA, setFileA]     = useState<File | null>(null)
+  const [fileB, setFileB]     = useState<File | null>(null)
   const [backupA, setBackupA] = useState<BackupData | null>(null)
   const [backupB, setBackupB] = useState<BackupData | null>(null)
-  const [loaded, setLoaded] = useState<LoadedState | null>(null)
+  const [screen, setScreen]   = useState<'home' | 'merger'>('home')
+  const [loaded, setLoaded]   = useState<LoadedState | null>(null)
   const [loadingSlot, setLoadingSlot] = useState<'a' | 'b' | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError]     = useState<string | null>(null)
 
   const loadFile = useCallback(async (file: File, slot: 'a' | 'b') => {
     setLoadingSlot(slot)
@@ -28,7 +30,7 @@ export default function App() {
     try {
       const data = await parseBackup(file)
       if (slot === 'a') { setFileA(file); setBackupA(data) }
-      else { setFileB(file); setBackupB(data) }
+      else              { setFileB(file); setBackupB(data) }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -41,9 +43,28 @@ export default function App() {
     setLoaded({ fileA, fileB, backupA, backupB, comparison: compareBackups(backupA, backupB) })
   }, [backupA, backupB, fileA, fileB])
 
+  useEffect(() => {
+    const handlePop = () => {
+      setLoaded(null)
+      setError(null)
+      setScreen('home')
+    }
+    window.addEventListener('popstate', handlePop)
+    return () => window.removeEventListener('popstate', handlePop)
+  }, [])
+
   const handleReset = () => {
-    setLoaded(null); setFileA(null); setFileB(null)
-    setBackupA(null); setBackupB(null); setError(null)
+    setLoaded(null)
+    setError(null)
+  }
+
+  const goToMerger = () => {
+    window.history.pushState({ screen: 'merger' }, '')
+    setScreen('merger')
+  }
+
+  if (screen === 'home') {
+    return <Hero onStart={goToMerger} />
   }
 
   if (loaded) {
@@ -68,6 +89,7 @@ export default function App() {
       onFileA={f => loadFile(f, 'a')}
       onFileB={f => loadFile(f, 'b')}
       onCompare={handleCompare}
+      onBack={() => window.history.back()}
     />
   )
 }
