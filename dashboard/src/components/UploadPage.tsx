@@ -94,7 +94,7 @@ export function Landing({ backupA, backupB, loadingSlot, error, onFileA, onFileB
               <ArrowLeft size={13} />
               Retour
             </button>
-            <div className="flex items-center gap-2 text-xs text-slate-400">
+            <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400">
               <ShieldCheck size={12} className="text-emerald-500" />
               100 % local · aucune donnée envoyée
             </div>
@@ -102,10 +102,10 @@ export function Landing({ backupA, backupB, loadingSlot, error, onFileA, onFileB
         </div>
       </nav>
 
-      <main className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-10 items-start">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-8 items-start">
 
         {/* ─── Tutoriel ─── */}
-        <div>
+        <div className="order-2 lg:order-1">
           <div className="mb-8">
             <span className="inline-block px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-xs font-semibold ring-1 ring-indigo-200 mb-3">
               Guide pas-à-pas
@@ -136,7 +136,7 @@ export function Landing({ backupA, backupB, loadingSlot, error, onFileA, onFileB
                         <span className="text-[10px] font-black text-slate-300 tabular-nums">{step.num}</span>
                         <h3 className="text-sm font-bold text-slate-800">{step.title}</h3>
                       </div>
-                      <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 ${BADGE_COLORS[step.color]}`}>
+                      <span className={`hidden sm:inline text-[10px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap shrink-0 ${BADGE_COLORS[step.color]}`}>
                         {step.badge}
                       </span>
                     </div>
@@ -178,7 +178,7 @@ export function Landing({ backupA, backupB, loadingSlot, error, onFileA, onFileB
         </div>
 
         {/* ─── Upload ─── */}
-        <div className="lg:sticky lg:top-8">
+        <div className="order-1 lg:order-2 lg:sticky lg:top-8">
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
 
             <div className="mb-5">

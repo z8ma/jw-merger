@@ -138,15 +138,25 @@ export function MergeModal({ comparison, fileA, fileB, onClose }: Props) {
 
           {/* Done */}
           {phase === 'done' && (
-            <div className="flex flex-col items-center py-4 gap-4">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
-                <CheckCircle size={28} className="text-emerald-600" />
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex items-center gap-3 pt-2">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <CheckCircle size={24} className="text-emerald-600" />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-800">Fusion terminée !</p>
+                  <p className="text-xs text-slate-400">Le fichier est prêt à être restauré</p>
+                </div>
               </div>
-              <div className="text-center">
-                <p className="font-semibold text-slate-800">Fichier prêt !</p>
-                <p className="text-sm text-slate-500 mt-1">
-                  {totalNotes} notes · {totalMarks.toLocaleString()} surlignages
-                </p>
+
+              {/* Résumé détaillé */}
+              <div className="w-full grid grid-cols-2 gap-2">
+                <SummaryTile color="blue"    label={`Notes de ${nameA}`}        value={`+${comparison.onlyA.notes}`}  />
+                <SummaryTile color="amber"   label={`Notes de ${nameB}`}        value={`+${comparison.onlyB.notes}`}  />
+                <SummaryTile color="blue"    label={`Surlignages de ${nameA}`}  value={`+${comparison.onlyA.marks}`}  />
+                <SummaryTile color="amber"   label={`Surlignages de ${nameB}`}  value={`+${comparison.onlyB.marks}`}  />
+                <SummaryTile color="emerald" label="Notes communes"             value={String(comparison.common?.notes ?? totalNotes - comparison.onlyA.notes - comparison.onlyB.notes)} />
+                <SummaryTile color="violet"  label="Conflits résolus"           value={String(comparison.publicationGroups.length)} />
               </div>
             </div>
           )}
@@ -178,6 +188,21 @@ export function MergeModal({ comparison, fileA, fileB, onClose }: Props) {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function SummaryTile({ color, label, value }: { color: string; label: string; value: string }) {
+  const styles: Record<string, string> = {
+    blue:    'bg-blue-50 text-blue-700 border-blue-100',
+    amber:   'bg-amber-50 text-amber-700 border-amber-100',
+    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    violet:  'bg-violet-50 text-violet-700 border-violet-100',
+  }
+  return (
+    <div className={`rounded-xl border px-3 py-2.5 ${styles[color]}`}>
+      <p className="text-lg font-black tabular-nums">{value}</p>
+      <p className="text-[11px] opacity-70 leading-tight mt-0.5 truncate">{label}</p>
     </div>
   )
 }
