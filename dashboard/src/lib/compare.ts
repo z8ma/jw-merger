@@ -97,6 +97,9 @@ function computePublications(
         (x.chapterNumber ?? 0) - (y.chapterNumber ?? 0)
       ).map(toItem)
 
+    // Rien à arbitrer quand les deux appareils ont exactement les mêmes surlignages
+    if (onlyA.length === 0 && onlyB.length === 0) continue
+
     publicationGroups.push({
       keySymbol: key, isBible, commonCount: common,
       onlyA: sortItems(onlyA),
@@ -109,11 +112,9 @@ function computePublications(
     arr.sort((x, y) => (y.countA + y.countB) - (x.countA + x.countB))
 
   byTotal(publicationConflicts)
-  publicationGroups.sort((x, y) => {
-    const tx = (groupsA.get(x.keySymbol)?.length ?? 0) + (groupsB.get(y.keySymbol)?.length ?? 0)
-    const ty = (groupsA.get(y.keySymbol)?.length ?? 0) + (groupsB.get(x.keySymbol)?.length ?? 0)
-    return ty - tx
-  })
+  const total = (keySymbol: string) =>
+    (groupsA.get(keySymbol)?.length ?? 0) + (groupsB.get(keySymbol)?.length ?? 0)
+  publicationGroups.sort((x, y) => total(y.keySymbol) - total(x.keySymbol))
 
   return { publicationConflicts, publicationGroups }
 }

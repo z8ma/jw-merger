@@ -11,7 +11,7 @@ from .options import MergeOptions
 from .context import MergeContext
 from .packager import (
     open_backup, create_merged_db, copy_media_files,
-    write_manifest, package_output, finalize_last_modified,
+    write_manifest, package_output, finalize_last_modified, read_schema_version,
 )
 from . import locations, highlights, notes, media, annotations
 
@@ -176,7 +176,7 @@ def run(
         db_b.close()
 
         copy_media_files(tmp_a, tmp_b, tmp_out)
-        write_manifest(tmp_out, output_path)
+        write_manifest(tmp_out, output_path, read_schema_version(tmp_a))
         package_output(tmp_out, output_path)
 
         _progress("Fusion terminée.")

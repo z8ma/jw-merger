@@ -1,7 +1,8 @@
-import { useState } from 'react'
-import { GitMerge, Download, X, CheckCircle, Loader2, FileText, Highlighter, Tag, PenLine, Layers } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { GitMerge, Download, X, CheckCircle, Loader2, FileText, Highlighter, Tag, PenLine, Layers, TriangleAlert } from 'lucide-react'
 import type { Comparison, HighlightChoices } from '../types'
-import { mergeBackups } from '../lib/merge'
+import { mergeInWorker } from '../lib/mergeInWorker'
+import type { MergeResult } from '../lib/merge'
 import { ConflictResolver } from './ConflictResolver'
 
 interface Props {
@@ -11,7 +12,7 @@ interface Props {
   onClose: () => void
 }
 
-type Phase = 'conflicts' | 'confirm' | 'merging' | 'done'
+type Phase = 'conflicts' | 'confirm' | 'merging' | 'done' | 'error'
 
 export function MergeModal({ comparison, fileA, fileB, onClose }: Props) {
   const hasConflicts = comparison.publicationGroups.length > 0
@@ -22,35 +23,50 @@ export function MergeModal({ comparison, fileA, fileB, onClose }: Props) {
     excludedGuids:  new Set<string>(),
   }))
   const [progress, setProgress] = useState('')
-  const [blob, setBlob] = useState<Blob | null>(null)
+  const [error, setError] = useState('')
+  const [result, setResult] = useState<MergeResult | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+
+  // Fermer la fenêtre pendant une fusion l'interrompt
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   const nameA = fileA.name.replace('.jwlibrary', '')
   const nameB = fileB.name.replace('.jwlibrary', '')
 
   const totalNotes = comparison.notes.length
   const newNotes   = comparison.onlyA.notes + comparison.onlyB.notes
-  const totalMarks = comparison.marks.length
-  const newMarks   = comparison.onlyA.marks + comparison.onlyB.marks
+  // Surlignages écartés dans l'écran de choix, par appareil
+  const countExcluded = (side: 'onlyA' | 'onlyB') =>
+    comparison.publicationGroups.reduce((n, g) => n + g[side].filter(i => choices.excludedGuids.has(i.guid)).length, 0)
+  const keptMarksA = comparison.onlyA.marks - countExcluded('onlyA')
+  const keptMarksB = comparison.onlyB.marks - countExcluded('onlyB')
+  const newMarks   = keptMarksA + keptMarksB
+  const totalMarks = comparison.common.marks + newMarks
 
   const handleMerge = async () => {
+    const abort = new AbortController()
+    abortRef.current = abort
+    setProgress('')
     setPhase('merging')
     try {
-      const result = await mergeBackups(fileA, fileB, p => setProgress(p.step), choices)
-      setBlob(result)
+      setResult(await mergeInWorker(fileA, fileB, setProgress, choices, abort.signal))
       setPhase('done')
     } catch (e) {
-      setProgress(`Erreur : ${e instanceof Error ? e.message : String(e)}`)
+      if (abort.signal.aborted) return
+      setError(e instanceof Error ? e.message : String(e))
+      setPhase('error')
     }
   }
 
   const handleDownload = () => {
-    if (!blob) return
-    const url = URL.createObjectURL(blob)
+    if (!result) return
+    const url = URL.createObjectURL(result.blob)
     const a = document.createElement('a')
     a.href = url
     a.download = `Merged_${new Date().toISOString().slice(0, 10)}.jwlibrary`
     a.click()
-    URL.revokeObjectURL(url)
+    // Révoquer tout de suite peut interrompre le téléchargement sur Safari et Firefox
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
   }
 
   const title = {
@@ -58,6 +74,7 @@ export function MergeModal({ comparison, fileA, fileB, onClose }: Props) {
     confirm:   'Fusion des sauvegardes',
     merging:   'Fusion en cours…',
     done:      'Fusion terminée !',
+    error:     'La fusion a échoué',
   }[phase]
 
   return (
@@ -136,8 +153,23 @@ export function MergeModal({ comparison, fileA, fileB, onClose }: Props) {
             </div>
           )}
 
+          {/* Error */}
+          {phase === 'error' && (
+            <div className="flex flex-col items-center py-4 gap-4">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                <TriangleAlert size={28} className="text-red-600" />
+              </div>
+              <p className="text-sm text-slate-600 text-center">
+                La fusion s'est arrêtée{progress && <> pendant l'étape « {progress} »</>}. Tes fichiers d'origine ne sont pas modifiés.
+              </p>
+              <div className="w-full px-4 py-3 rounded-xl border border-red-200 bg-red-50 text-xs text-red-600 break-words">
+                {error}
+              </div>
+            </div>
+          )}
+
           {/* Done */}
-          {phase === 'done' && (
+          {phase === 'done' && result && (
             <div className="flex flex-col items-center gap-4">
               <div className="flex items-center gap-3 pt-2">
                 <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -153,11 +185,16 @@ export function MergeModal({ comparison, fileA, fileB, onClose }: Props) {
               <div className="w-full grid grid-cols-2 gap-2">
                 <SummaryTile color="blue"    label={`Notes de ${nameA}`}        value={`+${comparison.onlyA.notes}`}  />
                 <SummaryTile color="amber"   label={`Notes de ${nameB}`}        value={`+${comparison.onlyB.notes}`}  />
-                <SummaryTile color="blue"    label={`Surlignages de ${nameA}`}  value={`+${comparison.onlyA.marks}`}  />
-                <SummaryTile color="amber"   label={`Surlignages de ${nameB}`}  value={`+${comparison.onlyB.marks}`}  />
-                <SummaryTile color="emerald" label="Notes communes"             value={String(comparison.common?.notes ?? totalNotes - comparison.onlyA.notes - comparison.onlyB.notes)} />
-                <SummaryTile color="violet"  label="Conflits résolus"           value={String(comparison.publicationGroups.length)} />
+                <SummaryTile color="blue"    label={`Surlignages de ${nameA}`}  value={`+${keptMarksA}`}  />
+                <SummaryTile color="amber"   label={`Surlignages de ${nameB}`}  value={`+${keptMarksB}`}  />
+                <SummaryTile color="emerald" label="Notes communes"             value={String(comparison.common.notes)} />
+                <SummaryTile color="violet"  label="Surlignages en double réunis" value={String(result.stats.markConflicts)} />
               </div>
+              <p className="text-xs text-slate-500 text-center">
+                Le fichier contient <strong className="text-slate-700">{result.stats.notes.toLocaleString()}</strong> notes
+                et <strong className="text-slate-700">{result.stats.userMarks.toLocaleString()}</strong> surlignages
+                {result.stats.noteConflicts > 0 && <> · {result.stats.noteConflicts} note(s) modifiée(s) des deux côtés, contenus réunis</>}.
+              </p>
             </div>
           )}
         </div>
@@ -174,6 +211,19 @@ export function MergeModal({ comparison, fileA, fileB, onClose }: Props) {
                 className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-sm"
               >
                 Fusionner maintenant
+              </button>
+            </>
+          )}
+          {phase === 'error' && (
+            <>
+              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:bg-slate-100 transition-colors">
+                Fermer
+              </button>
+              <button
+                onClick={handleMerge}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-sm"
+              >
+                Réessayer
               </button>
             </>
           )}

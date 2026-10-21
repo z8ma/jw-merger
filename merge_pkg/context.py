@@ -3,6 +3,7 @@ MergeContext — état partagé entre tous les modules de fusion.
 Contient les maps d'IDs et les helpers SQL.
 """
 from __future__ import annotations
+import re
 import sqlite3
 from dataclasses import dataclass, field
 from typing import Any
@@ -64,7 +65,14 @@ def merge_text(a: str | None, b: str | None, separator: str) -> str | None:
     if not ta: return b
     if not tb: return a
     if ta == tb: return a
-    return ta + separator + tb
+    # Un texte déjà concaténé lors d'une fusion précédente ne doit pas être répété : on réunit les blocs.
+    marker = separator.strip()
+    split = (lambda t: re.split(rf"\s*^{re.escape(marker)}$\s*", t, flags=re.MULTILINE)) if marker else (lambda t: [t])
+    blocks_a, blocks_b = split(ta), split(tb)
+    missing_from_a = [block for block in blocks_b if block not in blocks_a]
+    if not missing_from_a: return a
+    if all(block in blocks_b for block in blocks_a): return b
+    return separator.join(blocks_a + missing_from_a)
 
 
 def resolve_text(a: str | None, b: str | None, lm_a: str, lm_b: str,

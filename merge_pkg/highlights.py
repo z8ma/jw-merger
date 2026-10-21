@@ -100,6 +100,14 @@ def _resolve_conflicts(ctx: MergeContext) -> int:
     """
     strategy = ctx.options.highlights.conflict_strategy
 
+    # Les notes ne sont pas encore fusionnées : on lit dans les sources quels surlignages en portent une
+    with_note: set[int] = set()
+    for i, db in enumerate(ctx.sources):
+        for r in db.execute("SELECT DISTINCT UserMarkId FROM Note WHERE UserMarkId IS NOT NULL"):
+            new_id = ctx.mark_map[i].get(r["UserMarkId"])
+            if new_id is not None:
+                with_note.add(new_id)
+
     conflicts = ctx.out.execute("""
         SELECT br1.UserMarkId AS id1, br2.UserMarkId AS id2
         FROM BlockRange br1
@@ -114,18 +122,37 @@ def _resolve_conflicts(ctx: MergeContext) -> int:
         WHERE um1.LocationId = um2.LocationId
     """).fetchall()
 
-    for c in conflicts:
-        id1, id2 = c["id1"], c["id2"]
-        winner, loser = _pick_winner(ctx.out, id1, id2, strategy)
-        _apply_resolution(ctx, winner, loser)
+    # perdant → gagnant ; un perdant peut lui-même avoir gagné un conflit précédent
+    replaced_by: dict[int, int] = {}
 
-    if conflicts:
+    def survivor(mark_id: int) -> int:
+        while mark_id in replaced_by:
+            mark_id = replaced_by[mark_id]
+        return mark_id
+
+    for c in conflicts:
+        id1, id2 = survivor(c["id1"]), survivor(c["id2"])
+        if id1 == id2:
+            continue
+        winner, loser = _pick_winner(with_note, id1, id2, strategy)
+        ctx.out.execute("DELETE FROM BlockRange WHERE UserMarkId = ?", (loser,))
+        ctx.out.execute("DELETE FROM UserMark WHERE UserMarkId = ?", (loser,))
+        replaced_by[loser] = winner
+        # notes.run rattachera les notes du perdant au gagnant via mark_map
+        if loser in with_note:
+            with_note.add(winner)
+
+    if replaced_by:
+        for m in ctx.mark_map:
+            for k, v in m.items():
+                if v in replaced_by:
+                    m[k] = survivor(v)
         ctx.out.commit()
 
-    return len(conflicts)
+    return len(replaced_by)
 
 
-def _pick_winner(out: sqlite3.Connection, id1: int, id2: int,
+def _pick_winner(with_note: set[int], id1: int, id2: int,
                  strategy: str) -> tuple[int, int]:
     """Retourne (winner_id, loser_id) selon la stratégie."""
     match strategy:
@@ -134,20 +161,6 @@ def _pick_winner(out: sqlite3.Connection, id1: int, id2: int,
         case "keep_b":
             return id2, id1
         case _:  # keep_with_note (défaut)
-            has_note_1 = query_one(out, "SELECT 1 FROM Note WHERE UserMarkId = ?", (id1,))
-            has_note_2 = query_one(out, "SELECT 1 FROM Note WHERE UserMarkId = ?", (id2,))
-            if has_note_2 and not has_note_1:
+            if id2 in with_note and id1 not in with_note:
                 return id2, id1
             return id1, id2
-
-
-def _apply_resolution(ctx: MergeContext, winner: int, loser: int) -> None:
-    """Réassigne les notes du perdant au gagnant et supprime le perdant."""
-    ctx.out.execute("UPDATE Note SET UserMarkId = ? WHERE UserMarkId = ?", (winner, loser))
-    ctx.out.execute("DELETE FROM BlockRange WHERE UserMarkId = ?", (loser,))
-    ctx.out.execute("DELETE FROM UserMark WHERE UserMarkId = ?", (loser,))
-    # Corriger les maps pour ne plus référencer le perdant
-    for m in ctx.mark_map:
-        for k in list(m):
-            if m[k] == loser:
-                m[k] = winner

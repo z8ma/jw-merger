@@ -65,6 +65,15 @@ def copy_media_files(dir_a: str, dir_b: str, out_dir: str) -> None:
                 shutil.copy(os.path.join(src, fname), dst)
 
 
+def read_schema_version(src_dir: str, default: int = 16) -> int:
+    """schemaVersion de la sauvegarde dont on reprend le schéma de base."""
+    try:
+        with open(os.path.join(src_dir, "manifest.json"), encoding="utf-8") as f:
+            return json.load(f)["userDataBackup"]["schemaVersion"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return default
+
+
 def write_manifest(out_dir: str, output_path: str, schema_version: int = 16) -> None:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
     db_path = os.path.join(out_dir, "userData.db")

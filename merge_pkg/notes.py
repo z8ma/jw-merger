@@ -79,9 +79,10 @@ def _merge_notes(ctx: MergeContext) -> tuple[int, int]:
             )
 
             # Titre : préférer le plus récent
-            title = row_a["Title"]
+            newer, older = row_a, row_b
             if (row_b["LastModified"] or "") > (row_a["LastModified"] or ""):
-                title = row_b["Title"]
+                newer, older = row_b, row_a
+            title = newer["Title"] or older["Title"]
 
             last_modified = max(
                 row_a["LastModified"] or "",

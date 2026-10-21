@@ -62,13 +62,14 @@ def _merge_bookmarks(ctx: MergeContext) -> None:
     for i, db in enumerate(ctx.sources):
         for row in rows(db, "Bookmark"):
             new_loc     = ctx.loc_map[i].get(row["LocationId"])
-            new_pub_loc = ctx.loc_map[i].get(row["PublicationLocationId"]) if row["PublicationLocationId"] else None
-            if new_loc is None:
+            new_pub_loc = ctx.loc_map[i].get(row["PublicationLocationId"])
+            if new_loc is None or new_pub_loc is None:
                 continue
 
+            # Contrainte du schéma : UNIQUE(PublicationLocationId, Slot)
             exists = query_one(ctx.out,
-                "SELECT 1 FROM Bookmark WHERE LocationId = ? AND PublicationLocationId IS ?",
-                (new_loc, new_pub_loc))
+                "SELECT 1 FROM Bookmark WHERE PublicationLocationId = ? AND Slot = ?",
+                (new_pub_loc, row["Slot"]))
             if not exists:
                 insert(ctx.out, "Bookmark", {
                     "LocationId":            new_loc,
