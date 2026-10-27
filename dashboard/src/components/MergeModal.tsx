@@ -58,12 +58,31 @@ export function MergeModal({ comparison, fileA, fileB, onClose }: Props) {
     }
   }
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!result) return
-    const url = URL.createObjectURL(result.blob)
+    const filename = `Merged_${new Date().toISOString().slice(0, 10)}.jwlibrary`
+    const file = new File([result.blob], filename, { type: 'application/octet-stream' })
+
+    // Sur mobile (iPhone surtout), Safari reconnaît le contenu zip et renomme le
+    // téléchargement en .jwlibrary.zip, que l'app Fichiers décompresse ensuite.
+    // La feuille de partage, elle, garde le nom exact et permet d'ouvrir le fichier
+    // directement dans JW Library ou de l'enregistrer dans Fichiers.
+    const isMobile = window.matchMedia('(pointer: coarse)').matches
+    if (isMobile && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] })
+        return
+      } catch (e) {
+        // Partage annulé par l'utilisateur : on ne fait rien de plus
+        if (e instanceof DOMException && e.name === 'AbortError') return
+        // Autre échec : on retombe sur le téléchargement classique
+      }
+    }
+
+    const url = URL.createObjectURL(file)
     const a = document.createElement('a')
     a.href = url
-    a.download = `Merged_${new Date().toISOString().slice(0, 10)}.jwlibrary`
+    a.download = filename
     a.click()
     // Révoquer tout de suite peut interrompre le téléchargement sur Safari et Firefox
     setTimeout(() => URL.revokeObjectURL(url), 60_000)

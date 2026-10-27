@@ -644,7 +644,10 @@ export async function mergeBackups(
 
   step('Création de l’archive…')
   let lastPercent = -1
-  const blob = await outZip.generateAsync({ type: 'blob' }, meta => {
+  // JSZip étiquette le blob en "application/zip" par défaut : Safari (iOS/macOS)
+  // et certains navigateurs Android renomment alors le fichier en .zip.
+  // Un type générique leur fait respecter le nom .jwlibrary.
+  const blob = await outZip.generateAsync({ type: 'blob', mimeType: 'application/octet-stream' }, meta => {
     const percent = Math.floor(meta.percent)
     if (percent === lastPercent) return
     lastPercent = percent
