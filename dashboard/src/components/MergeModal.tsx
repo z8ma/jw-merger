@@ -60,10 +60,13 @@ export function MergeModal({ comparison, fileA, fileB, onClose }: Props) {
 
   const handleDownload = () => {
     if (!result) return
-    const url = URL.createObjectURL(result.blob)
+    const filename = `Merged_${new Date().toISOString().slice(0, 10)}.jwlibrary`
+    // Type générique pour que le navigateur garde l'extension .jwlibrary au lieu d'ajouter .zip
+    const file = new File([result.blob], filename, { type: 'application/octet-stream' })
+    const url = URL.createObjectURL(file)
     const a = document.createElement('a')
     a.href = url
-    a.download = `Merged_${new Date().toISOString().slice(0, 10)}.jwlibrary`
+    a.download = filename
     a.click()
     // Révoquer tout de suite peut interrompre le téléchargement sur Safari et Firefox
     setTimeout(() => URL.revokeObjectURL(url), 60_000)
